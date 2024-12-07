@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # Setup the serial connection
-arduino_port = 'COM8'  # Replace with the correct COM port for your Arduino
+arduino_port = 'COM10'  # Replace with the correct COM port for your Arduino
 baud_rate = 9600
 try:
     ser = serial.Serial(arduino_port, baud_rate, timeout=1)
